@@ -21,11 +21,11 @@ if not os.path.exists(yaml_file):
 
 # 加载Restormer模型
 def load_restormer_model():
-    # 预训练模型的路径
-    weights_path = 'D:/ProgramData/pycharm/Image-Enhancement/Deraining/pretrained_models/deraining.pth'
-
     # 获取当前文件所在的目录
     current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    weights_path = os.path.join(current_dir, 'pretrained_models', 'deraining.pth')
+    # weights_path = './pretrained_models/deraining.pth'
 
     # 使用相对路径构建yaml文件的路径
     yaml_file = os.path.join(current_dir, 'Options', 'Deraining_Restormer.yml')

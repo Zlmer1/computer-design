@@ -1,8 +1,8 @@
 import sys
 
 from PyQt5 import QtWidgets, QtGui, QtCore
-import RainEnhanceUI
 from Deraining.deraining import load_restormer_model,RainEnhanceUI
+from Lowlightenhance.lowlight_enhance import load_model,LowLightEnhanceUI
 
 class ImageEnhancerApp(QtWidgets.QWidget):
     def __init__(self):
@@ -10,6 +10,7 @@ class ImageEnhancerApp(QtWidgets.QWidget):
 
         # Initialize model
         self.model_restoration = load_restormer_model()
+        self.lowlight_model = load_model()
 
         self.initUI()
 
@@ -59,8 +60,8 @@ class ImageEnhancerApp(QtWidgets.QWidget):
         self.rainy_ui.show()
 
     def show_low_light_ui(self):
-        # Low light enhancement function (empty for now)
-        pass
+        self.low_light_ui = LowLightEnhanceUI(self.lowlight_model)
+        self.low_light_ui.show()
 
     def show_foggy_ui(self):
         # Foggy day enhancement function (empty for now)
