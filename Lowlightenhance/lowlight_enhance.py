@@ -1,15 +1,9 @@
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-import argparse
-from tqdm import tqdm
-from data.data import *
-from torchvision import transforms
-from torch.utils.data import DataLoader
-from loss.losses import *
+from .data.data import *
+#from .loss.losses import *
 # from net.CIDNet import CIDNet
-from net.retinex import Retinex
-from skimage import img_as_ubyte
-from data.singledata import SingleImageDataset
+from .net.retinex import Retinex
 import cv2
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5.QtWidgets import QFileDialog
@@ -28,20 +22,27 @@ def load_model():
 
     return model
 
-def enhance_image(input_image, model):
-    if isinstance(input_image, np.ndarray):
-        input_image = Image.fromarray(cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB))
+def lowlight_enhance(input_image, model):
+    # 转换为 RGB 格式
+    input_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+    transform = ToTensor()
+    image_tensor = transform(input_image).unsqueeze(0).cuda()
 
-    transform = SingleImageDataset.transform
-    input = DataLoader(SingleImageDataset(input_image, transform=transform), batch_size=1, shuffle=False)
-    # input_tensor = transform(input_image).unsqueeze(0).cuda()
-    input_tensor = next(iter(input))[0].cuda()
-
+    # 模型推理
     with torch.no_grad():
-        output, _ = model(input_tensor)
-        output = torch.clamp(output, 0, 1)
-    output_img = transforms.ToPILImage()(output.squeeze(0).cpu())
-    return output_img
+        output, _ = model(image_tensor)
+
+    # 处理输出
+    output_image = output.squeeze(0).cpu()  # 移除批量维度并移回 CPU
+    output_image = output_image.permute(1, 2, 0).numpy()  # 转为 [H, W, C]
+    output_image = (output_image * 255).astype("uint8")  # 转为 uint8 格式
+
+    # 转换为 QtGui.QImage
+    h, w, _ = output_image.shape
+    bytes_per_line = 3 * w
+    qimg = QtGui.QImage(output_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+
+    return qimg
 
 class LowLightEnhanceUI(QtWidgets.QWidget):
     def __init__(self, model):
@@ -93,14 +94,10 @@ class LowLightEnhanceUI(QtWidgets.QWidget):
     
     def enhance_image(self):
         if hasattr(self, 'original_image'):
-            # Enhance the image
-            self.enhanced_image = enhance_image(self.original_image, self.model)
-            self.display_image(self.enhanced_image, self.enhanced_image_label)
-            self.save_button.setEnabled(True)  # 启用“保存文件”按钮
+            enhanced_image = lowlight_enhance(self.original_image, self.model)
+            self.enhanced_image_label.setPixmap(QtGui.QPixmap.fromImage(enhanced_image).scaled(400, 300, QtCore.Qt.KeepAspectRatio))
 
     def display_image(self, image, label):
-        if isinstance(image, Image.Image):  # PIL Image
-            image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         h, w, _ = image_rgb.shape
         bytes_per_line = 3 * w
@@ -109,11 +106,16 @@ class LowLightEnhanceUI(QtWidgets.QWidget):
         label.setPixmap(pixmap.scaled(400, 300, QtCore.Qt.KeepAspectRatio))
 
     def save_file(self):
-        options = QFileDialog.Options()
-        file_path, _ = QFileDialog.getSaveFileName(self, "保存图像", "", "Images (*.png *.jpg)", options=options)
-        if file_path:
-            self.enhanced_image.save(file_path)
-            QtWidgets.QMessageBox.information(self, "保存成功", "图像已保存")
+        if hasattr(self, 'enhanced_image_label'):
+            options = QFileDialog.Options()
+            file_path, _ = QFileDialog.getSaveFileName(self, "保存图像", "", "Images (*.png *.jpg)", options=options)
+            if file_path:
+                # 保存增强后的图像
+                enhanced_image_np = self.enhanced_image_label.pixmap().toImage()
+                enhanced_image_np.save(file_path)
+                QtWidgets.QMessageBox.information(self, "保存成功", "增强后的图像已保存")
+        else:
+            QtWidgets.QMessageBox.warning(self, "保存失败", "请先处理图像后再保存")
 
 if __name__ == '__main__':
     import sys

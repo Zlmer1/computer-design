@@ -7,7 +7,7 @@ import numpy as np
 from os import listdir
 from os.path import join
 from PIL import Image
-from data.util import *
+from .util import *
 from torchvision import transforms as t
 import torch.nn.functional as F
 

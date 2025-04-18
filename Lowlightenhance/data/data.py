@@ -1,7 +1,7 @@
 from torchvision.transforms import Compose, ToTensor, RandomCrop, RandomHorizontalFlip, RandomVerticalFlip
-from data.LOLdataset import *
-from data.eval_sets import *
-from data.SICE_blur_SID import *
+from .LOLdataset import *
+from .eval_sets import *
+from .SICE_blur_SID import *
 
 def transform1(size=256):
     return Compose([

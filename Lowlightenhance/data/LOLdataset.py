@@ -6,7 +6,7 @@ import torch.utils.data as data
 import numpy as np
 from os import listdir
 from os.path import join
-from data.util import *
+from .util import *
 from torchvision import transforms as t
 
     
